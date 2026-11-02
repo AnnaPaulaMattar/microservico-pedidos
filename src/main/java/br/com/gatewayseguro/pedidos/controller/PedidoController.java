@@ -1,6 +1,7 @@
 
 package br.com.gatewayseguro.pedidos.controller;
 
+import br.com.gatewayseguro.pedidos.security.GatewayTokenValidator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,20 +16,34 @@ import java.util.Map;
 @RequestMapping("/api")
 public class PedidoController {
 
+    private final GatewayTokenValidator tokenValidator;
+
+    public PedidoController(GatewayTokenValidator tokenValidator) {
+        this.tokenValidator = tokenValidator;
+    }
+
     @GetMapping("/pedidos")
     public ResponseEntity<?> listarPedidos(
             @RequestHeader(
                     value = "X-Gateway-Authenticated",
                     required = false
-            ) String autenticado) {
+            ) String autenticado,
+            @RequestHeader(
+                    value = "X-Gateway-Token",
+                    required = false
+            ) String tokenInterno) {
 
-        if (!"true".equals(autenticado)) {
+        if (!"true".equals(autenticado)
+                || !tokenValidator.validar(
+                tokenInterno,
+                "GET",
+                "/api/pedidos")) {
 
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body(Map.of(
                             "erro", "ACESSO_NEGADO",
-                            "mensagem", "Acesso permitido somente pelo Gateway"
+                            "mensagem", "Credencial interna ausente ou invalida"
                     ));
         }
 
